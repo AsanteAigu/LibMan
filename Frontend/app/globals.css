@@ -1,0 +1,208 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Design tokens ported 1:1 from the Google Stitch export
+ * (Frontend/stitch_libman_library_management_system.zip -> libman/DESIGN.md
+ * and the tailwind.config block repeated on every page's code.html).
+ * Centralized here instead of duplicated per page. Values are static
+ * (Stitch expresses light/dark by switching which token a class uses,
+ * e.g. `bg-surface-container-low dark:bg-inverse-surface`, not by
+ * re-theming a single token) except where noted below for shadcn/ui.
+ */
+@theme {
+  /* Material-Design-3-style surface/ink tokens, exactly as Stitch named them */
+  --color-surface: #fcf9f8;
+  --color-surface-dim: #dcd9d9;
+  --color-surface-bright: #fcf9f8;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f6f3f2;
+  --color-surface-container: #f0eded;
+  --color-surface-container-high: #eae7e7;
+  --color-surface-container-highest: #e5e2e1;
+  --color-on-surface: #1c1b1b;
+  --color-on-surface-variant: #44474d;
+  --color-inverse-surface: #313030;
+  --color-inverse-on-surface: #f3f0ef;
+  --color-outline: #75777e;
+  --color-outline-variant: #c5c6ce;
+  --color-surface-tint: #4f5e7e;
+  --color-primary-container: #1b2b48;
+  --color-on-primary-container: #8393b5;
+  --color-inverse-primary: #b7c7eb;
+  --color-secondary-container: #e0dfdf;
+  --color-on-secondary-container: #626362;
+  --color-tertiary: #211500;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #3b2800;
+  --color-on-tertiary-container: #ac8e5b;
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+  --color-primary-fixed: #d7e2ff;
+  --color-primary-fixed-dim: #b7c7eb;
+  --color-on-primary-fixed: #091b37;
+  --color-on-primary-fixed-variant: #374765;
+  --color-secondary-fixed: #e3e2e1;
+  --color-secondary-fixed-dim: #c7c6c5;
+  --color-on-secondary-fixed: #1a1c1c;
+  --color-on-secondary-fixed-variant: #464746;
+  --color-tertiary-fixed: #ffdea7;
+  --color-tertiary-fixed-dim: #e3c28a;
+  --color-on-tertiary-fixed: #271900;
+  --color-on-tertiary-fixed-variant: #594317;
+  --color-surface-variant: #e5e2e1;
+
+  /* Typography: font families */
+  --font-body-lg: var(--font-inter), sans-serif;
+  --font-body-md: var(--font-inter), sans-serif;
+  --font-label-md: var(--font-inter), sans-serif;
+  --font-label-sm: var(--font-inter), sans-serif;
+  --font-display-lg: var(--font-merriweather), serif;
+  --font-headline-lg: var(--font-merriweather), serif;
+  --font-headline-lg-mobile: var(--font-merriweather), serif;
+  --font-headline-md: var(--font-merriweather), serif;
+
+  /* Typography: font sizes (paired with line-height/weight/tracking, Tailwind v4 compound syntax) */
+  --text-display-lg: 48px;
+  --text-display-lg--line-height: 60px;
+  --text-display-lg--letter-spacing: -0.02em;
+  --text-display-lg--font-weight: 700;
+
+  --text-headline-lg: 32px;
+  --text-headline-lg--line-height: 40px;
+  --text-headline-lg--font-weight: 700;
+
+  --text-headline-lg-mobile: 24px;
+  --text-headline-lg-mobile--line-height: 32px;
+  --text-headline-lg-mobile--font-weight: 700;
+
+  --text-headline-md: 24px;
+  --text-headline-md--line-height: 32px;
+  --text-headline-md--font-weight: 400;
+
+  --text-body-lg: 18px;
+  --text-body-lg--line-height: 28px;
+  --text-body-lg--font-weight: 400;
+
+  --text-body-md: 16px;
+  --text-body-md--line-height: 24px;
+  --text-body-md--font-weight: 400;
+
+  --text-label-md: 14px;
+  --text-label-md--line-height: 20px;
+  --text-label-md--letter-spacing: 0.01em;
+  --text-label-md--font-weight: 600;
+
+  --text-label-sm: 12px;
+  --text-label-sm--line-height: 16px;
+  --text-label-sm--letter-spacing: 0.02em;
+  --text-label-sm--font-weight: 500;
+
+  /* Radius, exactly as shipped in the Stitch pages' tailwind.config (not the DESIGN.md prose, which drifted) */
+  --radius: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-full: 9999px;
+
+  /* Spacing / layout */
+  --spacing-base: 8px;
+  --spacing-gutter: 24px;
+  --spacing-margin-mobile: 16px;
+  --spacing-margin-desktop: 40px;
+  --spacing-container-max: 1280px;
+}
+
+/*
+ * Tokens that DO need to swap value under `.dark` -- background, primary,
+ * secondary, etc. -- kept as plain (unprefixed) variables so `@theme inline`
+ * below can alias them without colliding with the static tokens above.
+ * These back the handful of shadcn/ui primitives we use (Dialog,
+ * DropdownMenu, Sonner) so they read the Stitch palette instead of
+ * shadcn's default zinc theme.
+ */
+:root {
+  --background: #fcf9f8;
+  --foreground: #1c1b1b;
+  --card: #ffffff;
+  --card-foreground: #1c1b1b;
+  --popover: #ffffff;
+  --popover-foreground: #1c1b1b;
+  --primary: #041632;
+  --primary-foreground: #ffffff;
+  --secondary: #e0dfdf;
+  --secondary-foreground: #626362;
+  --muted: #f6f3f2;
+  --muted-foreground: #44474d;
+  --accent: #eae7e7;
+  --accent-foreground: #1c1b1b;
+  --destructive: #ba1a1a;
+  --border: #c5c6ce;
+  --input: #c5c6ce;
+  --ring: #041632;
+}
+
+.dark {
+  --background: #313030;
+  --foreground: #f3f0ef;
+  --card: #26262a;
+  --card-foreground: #f3f0ef;
+  --popover: #26262a;
+  --popover-foreground: #f3f0ef;
+  --primary: #b7c7eb;
+  --primary-foreground: #091b37;
+  --secondary: #c7c6c5;
+  --secondary-foreground: #1a1c1c;
+  --muted: #464746;
+  --muted-foreground: #e3e2e1;
+  --accent: #374765;
+  --accent-foreground: #f3f0ef;
+  --destructive: #ba1a1a;
+  --border: #374765;
+  --input: #374765;
+  --ring: #b7c7eb;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-on-background: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-on-primary: var(--primary-foreground);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-on-secondary: var(--secondary-foreground);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-inter), sans-serif;
+  --font-heading: var(--font-merriweather), serif;
+}
+
+.paper-texture {
+  background-color: var(--color-background);
+  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}

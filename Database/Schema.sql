@@ -1,6 +1,6 @@
 DROP VIEW IF EXISTS view_user_balances, view_active_loans CASCADE;
 DROP TABLE IF EXISTS withdrawal_log, settings, notifications, payments, charges, ebook_loans, reservations, loans, borrow_requests, ebook_editions, copies, titles, users CASCADE;
-DROP TYPE IF EXISTS user_role, copy_status, withdrawn_reason, borrow_request_status, return_condition, reservation_status, ebook_loan_status, charge_type, charge_status, payment_method CASCADE;
+DROP TYPE IF EXISTS user_role, copy_status, withdrawn_reason, borrow_request_status, return_condition, reservation_status, ebook_loan_status, charge_type, charge_status, payment_method, ebook_file_format CASCADE;
 
 CREATE TYPE user_role AS ENUM ('librarian', 'user');
 CREATE TYPE copy_status AS ENUM ('available', 'on_hold', 'on_loan', 'withdrawn');
@@ -9,9 +9,13 @@ CREATE TYPE borrow_request_status AS ENUM ('pending', 'approved', 'rejected');
 CREATE TYPE return_condition AS ENUM ('ok', 'damaged', 'lost');
 CREATE TYPE reservation_status AS ENUM ('waiting', 'notified', 'expired', 'cancelled', 'fulfilled');
 CREATE TYPE ebook_loan_status AS ENUM ('active', 'grace', 'returned', 'removed');
-CREATE TYPE charge_type AS ENUM ('late_fee', 'damage', 'lost', 'ebook_grace_expiry');
+-- 'membership_fee' added after initial launch: a recurring monthly charge that gates borrowing.
+CREATE TYPE charge_type AS ENUM ('late_fee', 'damage', 'lost', 'ebook_grace_expiry', 'membership_fee');
 CREATE TYPE charge_status AS ENUM ('unpaid', 'paid');
 CREATE TYPE payment_method AS ENUM ('paystack', 'cash');
+-- Added after initial launch (see ebook file upload feature): the uploaded
+-- book file's format, so the reader knows which viewer to use.
+CREATE TYPE ebook_file_format AS ENUM ('pdf', 'epub');
 
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
@@ -27,7 +31,8 @@ CREATE TABLE titles (
     name VARCHAR(255) NOT NULL,
     author VARCHAR(255) NOT NULL,
     replacement_cost NUMERIC(10, 2) NOT NULL CHECK (replacement_cost >= 0),
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    cover_image_url TEXT -- Added after initial launch
 );
 
 CREATE TABLE copies (
@@ -47,7 +52,11 @@ CREATE TABLE copies (
 CREATE TABLE ebook_editions (
     id SERIAL PRIMARY KEY,
     title_id INT UNIQUE NOT NULL REFERENCES titles(id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    -- Added after initial launch: the uploaded file itself, stored in
+    -- Supabase Storage (bucket "ebooks"); file_url is that object's public URL.
+    file_url TEXT,
+    file_format ebook_file_format
 );
 
 CREATE TABLE borrow_requests (
@@ -57,7 +66,11 @@ CREATE TABLE borrow_requests (
     status borrow_request_status NOT NULL DEFAULT 'pending',
     rejection_reason TEXT,
     requested_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    decided_at TIMESTAMPTZ
+    decided_at TIMESTAMPTZ,
+    -- Added after initial launch: how long the student wants the loan for, chosen at
+    -- request time (1 minute to 30 days). Carried onto the resulting loan row by
+    -- trg_handle_borrow_request_approval, then applied to due_date at collection time.
+    requested_duration_minutes INT NOT NULL DEFAULT 20160 CHECK (requested_duration_minutes BETWEEN 1 AND 43200)
 );
 
 CREATE TABLE loans (
@@ -73,8 +86,17 @@ CREATE TABLE loans (
     return_condition return_condition,
     extended BOOLEAN DEFAULT FALSE,
     extended_due_date TIMESTAMPTZ,
+    -- Added after initial launch: copied from borrow_requests.requested_duration_minutes
+    -- by trg_handle_borrow_request_approval; null for loans created by reservation
+    -- fulfillment (trg_handle_loan_return), which falls back to 14 days at collection.
+    requested_duration_minutes INT,
+    -- A real return always has both collected_at and return_condition set. The one
+    -- exception (added after initial launch): an unclaimed hold being auto-released
+    -- (see expireUnclaimedHolds) sets returned_at with collected_at/return_condition
+    -- both left null, deliberately reusing trg_handle_loan_return's copy/reservation
+    -- cascade instead of duplicating that logic in application code.
     CONSTRAINT chk_collected_before_returned CHECK (
-        returned_at IS NULL OR collected_at IS NOT NULL
+        returned_at IS NULL OR collected_at IS NOT NULL OR return_condition IS NULL
     )
 );
 
@@ -180,8 +202,8 @@ BEGIN
     IF NEW.status = 'approved' AND OLD.status = 'pending' THEN
         NEW.decided_at := CURRENT_TIMESTAMP;
 
-        INSERT INTO loans (borrow_request_id, copy_id, user_id, hold_expires_at)
-        VALUES (NEW.id, NEW.copy_id, NEW.user_id, CURRENT_TIMESTAMP + INTERVAL '6 hours');
+        INSERT INTO loans (borrow_request_id, copy_id, user_id, hold_expires_at, requested_duration_minutes)
+        VALUES (NEW.id, NEW.copy_id, NEW.user_id, CURRENT_TIMESTAMP + INTERVAL '6 hours', NEW.requested_duration_minutes);
 
         UPDATE copies SET status = 'on_hold' WHERE id = NEW.copy_id;
 
@@ -203,7 +225,7 @@ RETURNS TRIGGER AS $$
 BEGIN
     IF NEW.collected_at IS NOT NULL AND OLD.collected_at IS NULL THEN
         IF NEW.due_date IS NULL THEN
-            NEW.due_date := NEW.collected_at + INTERVAL '14 days';
+            NEW.due_date := NEW.collected_at + (COALESCE(NEW.requested_duration_minutes, 20160) || ' minutes')::INTERVAL;
         END IF;
 
         UPDATE copies SET status = 'on_loan' WHERE id = NEW.copy_id;
