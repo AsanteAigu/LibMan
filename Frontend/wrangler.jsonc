@@ -7,5 +7,13 @@
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
+  },
+  // NOTE: these NEXT_PUBLIC_* values only matter at BUILD time (baked into the
+  // client JS bundle by `next build`) -- listed here purely so `wrangler deploy`
+  // doesn't warn about/overwrite the dashboard's copy of the same vars. Changing
+  // this file alone does nothing; Frontend/.env.local is what the build actually reads.
+  "vars": {
+    "NEXT_PUBLIC_API_BASE_URL": "https://libman-3ohf.onrender.com/api",
+    "NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY": "pk_test_9ef4e29004052ee38821c0a4e3e82252bad9bee6"
   }
 }
