@@ -5,6 +5,13 @@ spring:
     url: ${DATABASE_URL}
     username: ${DATABASE_USERNAME}
     password: ${DATABASE_PASSWORD}
+    hikari:
+      # Supabase's session pooler caps total concurrent clients at 15 on the free
+      # tier -- that's shared across every connection to the project (local dev,
+      # psql, any other deployed instance), not per-app. HikariCP's default of 10
+      # lets a single instance eat most of that on its own; keep it modest so
+      # there's always room left over.
+      maximum-pool-size: 5
   jpa:
     hibernate:
       ddl-auto: validate
