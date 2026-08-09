@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 
 const TABS = [
   { href: ROUTES.catalogue, label: "Home", icon: "home" },
+  { href: ROUTES.ebookLibrary, label: "Ebooks", icon: "auto_stories" },
   { href: ROUTES.loans, label: "Loans", icon: "menu_book" },
   { href: ROUTES.reservations, label: "Holds", icon: "bookmark" },
   { href: ROUTES.notifications, label: "Alerts", icon: "notifications" },
@@ -18,7 +19,7 @@ export function BottomNav() {
 
   return (
     <nav className="bg-surface fixed bottom-0 w-full lg:hidden z-50 border-t border-outline-variant shadow-lg">
-      <div className="flex justify-around items-center px-4 py-2">
+      <div className="flex justify-around items-center px-1 py-2">
         {TABS.map((tab) => {
           const active = pathname === tab.href;
           return (
@@ -26,11 +27,11 @@ export function BottomNav() {
               key={tab.href}
               href={tab.href}
               className={cn(
-                "flex flex-col items-center gap-0.5 px-2 py-1 rounded-md text-label-sm font-label-sm",
+                "flex flex-col items-center gap-0.5 px-1 py-1 rounded-md text-[10px] font-label-sm leading-tight",
                 active ? "text-primary" : "text-on-surface-variant"
               )}
             >
-              <span className="material-symbols-outlined text-[22px]">{tab.icon}</span>
+              <span className="material-symbols-outlined text-[20px]">{tab.icon}</span>
               {tab.label}
             </Link>
           );
