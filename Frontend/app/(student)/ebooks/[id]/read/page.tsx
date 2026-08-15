@@ -1,13 +1,14 @@
 "use client";
 
-import { use, useEffect, useRef, useState } from "react";
+import { use, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/TextLayer.css";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import Book from "epubjs";
 import type { Rendition } from "epubjs";
-import { useEbooks } from "@/features/loans/hooks";
+import { useEbooks, useEbookLoans } from "@/features/loans/hooks";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ROUTES } from "@/constants/routes";
 
@@ -18,10 +19,36 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 
 export default function EbookReaderPage({ params }: PageProps<"/ebooks/[id]/read">) {
   const { id } = use(params);
-  const { data: ebooks, isLoading } = useEbooks();
+  const { data: ebooks, isLoading: ebooksLoading } = useEbooks();
+  const { data: loans, isLoading: loansLoading } = useEbookLoans();
   const ebook = ebooks?.find((e) => e.id === id);
+  const loan = loans?.find((l) => l.ebookEditionId === id && (l.status === "active" || l.status === "grace"));
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const queryClient = useQueryClient();
+
+  // Live clock, not just the loan's status -- the scheduler that flips an expired loan's
+  // status to "grace" server-side runs once a minute, so relying on status alone would let
+  // a reader keep an already-expired book open for up to a minute after loanExpiresAt.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!loan || loan.status !== "active") return;
+    const msLeft = new Date(loan.loanExpiresAt).getTime() - Date.now();
+    if (msLeft <= 0) {
+      setNow(Date.now());
+      return;
+    }
+    const timer = setTimeout(() => {
+      setNow(Date.now());
+      queryClient.invalidateQueries({ queryKey: ["ebook-loans"] });
+    }, msLeft + 250);
+    return () => clearTimeout(timer);
+  }, [loan?.loanExpiresAt, loan?.status, queryClient]);
+
+  const hasAccess = useMemo(() => {
+    if (!loan || loan.status !== "active") return false;
+    return new Date(loan.loanExpiresAt).getTime() > now;
+  }, [loan, now]);
 
   useEffect(() => {
     const handleChange = () => setIsFullscreen(!!document.fullscreenElement);
@@ -37,8 +64,42 @@ export default function EbookReaderPage({ params }: PageProps<"/ebooks/[id]/read
     }
   };
 
-  if (isLoading) {
+  if (ebooksLoading || loansLoading) {
     return <div className="fixed inset-0 z-[60] bg-surface" />;
+  }
+
+  if (!hasAccess) {
+    const isGrace = loan?.status === "grace";
+    return (
+      <div ref={containerRef} className="fixed inset-0 z-[60] bg-surface flex flex-col">
+        <ReaderHeader title={ebook?.bookTitle} isFullscreen={isFullscreen} onToggleFullscreen={toggleFullscreen} />
+        <div className="flex-1 flex items-center justify-center">
+          {isGrace ? (
+            <EmptyState
+              icon="lock_clock"
+              title="Your reading time is up"
+              description="A charge has been added to your account -- pay it to keep reading, or the loan will be removed."
+              action={
+                <Link href={ROUTES.charges} className="text-label-md font-label-md text-primary hover:underline">
+                  Go to Charges
+                </Link>
+              }
+            />
+          ) : (
+            <EmptyState
+              icon="menu_book"
+              title="You don't have this ebook borrowed"
+              description="Borrow it from the library to start reading."
+              action={
+                <Link href={ROUTES.ebookLibrary} className="text-label-md font-label-md text-primary hover:underline">
+                  Back to Library
+                </Link>
+              }
+            />
+          )}
+        </div>
+      </div>
+    );
   }
 
   if (!ebook?.fileUrl || !ebook.fileFormat) {

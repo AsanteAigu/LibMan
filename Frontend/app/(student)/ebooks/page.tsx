@@ -18,8 +18,12 @@ export default function EbookLibraryPage() {
   const borrowEbook = useBorrowEbook();
   const [borrowing, setBorrowing] = useState<{ id: string; title: string } | null>(null);
 
+  // "removed" loans have lapsed the grace window unpaid -- the edition is free to borrow
+  // again, same as if it had never been borrowed.
   const isBorrowed = (ebookId: string) =>
-    myLoans?.some((l) => l.ebookEditionId === ebookId && l.status !== "returned");
+    myLoans?.some((l) => l.ebookEditionId === ebookId && (l.status === "active" || l.status === "grace"));
+
+  const currentLoans = myLoans?.filter((l) => l.status === "active" || l.status === "grace") ?? [];
 
   return (
     <div className="flex flex-col gap-8">
@@ -30,26 +34,32 @@ export default function EbookLibraryPage() {
         <p className="text-body-md text-on-surface-variant">Borrow and read digital editions instantly</p>
       </div>
 
-      {myLoans && myLoans.length > 0 && (
+      {currentLoans.length > 0 && (
         <div>
           <h2 className="font-headline-md text-headline-md text-on-surface mb-3">Currently reading</h2>
           <div className="flex flex-col divide-y divide-outline-variant rounded-lg border border-outline-variant">
-            {myLoans.map((loan) => (
+            {currentLoans.map((loan) => (
               <div key={loan.id} className="flex items-center justify-between px-4 py-3">
                 <div>
                   <p className="font-headline-md text-body-md text-on-surface">{loan.bookTitle}</p>
                   <p className="text-label-sm font-label-sm text-on-surface-variant">
-                    Expires {formatDate(loan.loanExpiresAt)}
+                    {loan.status === "grace" ? "Reading time ended" : `Expires ${formatDate(loan.loanExpiresAt)}`}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
                   <StatusBadge status={loan.status} />
-                  <Link
-                    href={ROUTES.ebookReader(loan.ebookEditionId)}
-                    className="text-label-md font-label-md text-primary hover:underline"
-                  >
-                    Read
-                  </Link>
+                  {loan.status === "grace" ? (
+                    <Link href={ROUTES.charges} className="text-label-md font-label-md text-primary hover:underline">
+                      Pay to continue
+                    </Link>
+                  ) : (
+                    <Link
+                      href={ROUTES.ebookReader(loan.ebookEditionId)}
+                      className="text-label-md font-label-md text-primary hover:underline"
+                    >
+                      Read
+                    </Link>
+                  )}
                 </div>
               </div>
             ))}

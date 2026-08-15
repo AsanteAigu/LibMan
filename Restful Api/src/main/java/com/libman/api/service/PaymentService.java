@@ -4,6 +4,7 @@ import com.libman.api.domain.Charge;
 import com.libman.api.domain.Payment;
 import com.libman.api.domain.User;
 import com.libman.api.domain.enums.ChargeStatus;
+import com.libman.api.domain.enums.ChargeType;
 import com.libman.api.domain.enums.PaymentMethod;
 import com.libman.api.exception.AppException;
 import com.libman.api.repository.ChargeRepository;
@@ -25,6 +26,7 @@ public class PaymentService {
     private final ChargeRepository chargeRepository;
     private final UserRepository userRepository;
     private final PaystackService paystackService;
+    private final EbookLoanService ebookLoanService;
 
     @Transactional(readOnly = true)
     public List<PaymentResponse> listForUser(Integer userId) {
@@ -66,8 +68,13 @@ public class PaymentService {
                 .paystackReference(method == PaymentMethod.paystack ? reference : null)
                 .clearedByLibrarian(method == PaymentMethod.cash ? requester : null)
                 .build();
+        payment = paymentRepository.save(payment);
 
-        return PaymentResponse.from(paymentRepository.save(payment));
+        if (charge.getType() == ChargeType.ebook_grace_expiry && charge.getEbookLoan() != null) {
+            ebookLoanService.reactivateAfterGracePayment(charge.getEbookLoan());
+        }
+
+        return PaymentResponse.from(payment);
     }
 
     /** Never trust a client's "the payment went through" claim -- the reference from

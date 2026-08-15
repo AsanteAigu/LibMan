@@ -124,6 +124,9 @@ CREATE TABLE ebook_loans (
     user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     borrowed_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     loan_expires_at TIMESTAMPTZ NOT NULL,
+    -- The duration originally chosen at borrow time, re-applied when a grace-period
+    -- payment reactivates the loan (see EbookLoanService.reactivateAfterGracePayment).
+    requested_duration_minutes INT NOT NULL DEFAULT 20160 CHECK (requested_duration_minutes BETWEEN 1 AND 43200),
     grace_expires_at TIMESTAMPTZ,
     returned_at TIMESTAMPTZ,
     extended BOOLEAN DEFAULT FALSE,

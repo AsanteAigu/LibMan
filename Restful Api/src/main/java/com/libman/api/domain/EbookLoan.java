@@ -42,6 +42,11 @@ public class EbookLoan {
     @Column(name = "loan_expires_at", nullable = false)
     private OffsetDateTime loanExpiresAt;
 
+    /** The duration originally chosen at borrow time; reapplied to loanExpiresAt if a
+     * grace-period payment reactivates this loan (see EbookLoanService). */
+    @Column(name = "requested_duration_minutes", nullable = false)
+    private Integer requestedDurationMinutes;
+
     @Column(name = "grace_expires_at")
     private OffsetDateTime graceExpiresAt;
 
