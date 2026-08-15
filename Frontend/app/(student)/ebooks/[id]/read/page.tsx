@@ -80,9 +80,14 @@ export default function EbookReaderPage({ params }: PageProps<"/ebooks/[id]/read
               title="Your reading time is up"
               description="A charge has been added to your account -- pay it to keep reading, or the loan will be removed."
               action={
-                <Link href={ROUTES.charges} className="text-label-md font-label-md text-primary hover:underline">
-                  Go to Charges
-                </Link>
+                <div className="flex items-center gap-4">
+                  <Link href={ROUTES.charges} className="text-label-md font-label-md text-primary hover:underline">
+                    Go to Charges
+                  </Link>
+                  <Link href={ROUTES.studentDashboard} className="text-label-md font-label-md text-on-surface-variant hover:underline">
+                    Home
+                  </Link>
+                </div>
               }
             />
           ) : (
@@ -91,9 +96,14 @@ export default function EbookReaderPage({ params }: PageProps<"/ebooks/[id]/read
               title="You don't have this ebook borrowed"
               description="Borrow it from the library to start reading."
               action={
-                <Link href={ROUTES.ebookLibrary} className="text-label-md font-label-md text-primary hover:underline">
-                  Back to Library
-                </Link>
+                <div className="flex items-center gap-4">
+                  <Link href={ROUTES.ebookLibrary} className="text-label-md font-label-md text-primary hover:underline">
+                    Back to Library
+                  </Link>
+                  <Link href={ROUTES.studentDashboard} className="text-label-md font-label-md text-on-surface-variant hover:underline">
+                    Home
+                  </Link>
+                </div>
               }
             />
           )}
